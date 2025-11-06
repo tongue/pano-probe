@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { LocationInput } from './components/LocationInput';
 import { ExampleLocations } from './components/ExampleLocations';
 import { DifficultyDisplay } from './components/DifficultyDisplay';
+import { PanoramaPreview } from './components/PanoramaPreview';
 import { AnalysisResults } from './components/AnalysisResults';
 import { FeatureDisplay } from './components/FeatureDisplay';
 import { CLIPResults } from './components/CLIPResults';
@@ -125,6 +126,11 @@ function App() {
             <DifficultyDisplay 
               difficulty={state.result.difficulty}
               confidence={state.result.confidence}
+            />
+            
+            <PanoramaPreview 
+              lat={state.features.lat}
+              lng={state.features.lng}
             />
             
             {state.clipAnalysis && (

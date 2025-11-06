@@ -2,34 +2,29 @@ import { TestLocation } from '../types';
 
 export const testLocations: TestLocation[] = [
   {
-    name: "Times Square, NYC",
-    lat: 40.758,
-    lng: -73.9855,
-    expectedDifficulty: 1 // Very easy
+    name: "Location 1",
+    panoId: "Iu7JF_lQxq0kPaHaVupiJw",
+    expectedDifficulty: 1
   },
   {
-    name: "Siberian Highway",
-    lat: 61.5,
-    lng: 105.3,
-    expectedDifficulty: 5 // Very hard
+    name: "Location 2",
+    panoId: "CkgOEcX22J5r4bB3mjXPoA",
+    expectedDifficulty: 2
   },
   {
-    name: "Tokyo Shibuya Crossing",
-    lat: 35.6595,
-    lng: 139.7004,
-    expectedDifficulty: 2 // Easy-medium (Japan is distinctive)
+    name: "Location 3",
+    panoId: "ft8UTxuSKhyFhI7ycTjL6g",
+    expectedDifficulty: 3
   },
   {
-    name: "Australian Outback",
-    lat: -26.5,
-    lng: 134.2,
-    expectedDifficulty: 5 // Very hard
+    name: "Location 4",
+    panoId: "v7EcjeQ2lD1drKzVgBr_HQ",
+    expectedDifficulty: 4
   },
   {
-    name: "Swiss Alps Village",
-    lat: 46.6183,
-    lng: 8.0897,
-    expectedDifficulty: 2 // Medium (distinctive but rural)
+    name: "Location 5",
+    panoId: "Mf0OdaX5NePiLVylK1VkiQ",
+    expectedDifficulty: 5
   }
 ];
 

@@ -1,29 +1,25 @@
-// Parse coordinates from various input formats
-export function parseCoordinates(input: string): { lat: number; lng: number } | null {
-  // Try to match lat,lng format
-  const coordPattern = /^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/;
-  const match = input.trim().match(coordPattern);
+// Parse panoId from various input formats
+export function parsePanoId(input: string): string | null {
+  const trimmed = input.trim();
   
-  if (match) {
-    const lat = parseFloat(match[1]);
-    const lng = parseFloat(match[2]);
-    
-    if (isValidCoordinate(lat, lng)) {
-      return { lat, lng };
-    }
+  // Direct panoId (22 characters, alphanumeric with _ and -)
+  const panoIdPattern = /^[A-Za-z0-9_-]{22}$/;
+  if (panoIdPattern.test(trimmed)) {
+    return trimmed;
   }
   
-  // Try to extract from Google Maps URL
-  const gmapsPattern = /@(-?\d+\.?\d*),(-?\d+\.?\d*)/;
-  const gmapsMatch = input.match(gmapsPattern);
+  // Extract from Google Maps URL (format: !1s{panoId})
+  const urlPattern = /!1s([A-Za-z0-9_-]{22})/;
+  const urlMatch = trimmed.match(urlPattern);
+  if (urlMatch) {
+    return urlMatch[1];
+  }
   
-  if (gmapsMatch) {
-    const lat = parseFloat(gmapsMatch[1]);
-    const lng = parseFloat(gmapsMatch[2]);
-    
-    if (isValidCoordinate(lat, lng)) {
-      return { lat, lng };
-    }
+  // Extract from data parameter in URL
+  const dataPattern = /[?&]data=[^&]*!1s([A-Za-z0-9_-]{22})/;
+  const dataMatch = trimmed.match(dataPattern);
+  if (dataMatch) {
+    return dataMatch[1];
   }
   
   return null;

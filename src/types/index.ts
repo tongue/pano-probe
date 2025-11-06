@@ -93,8 +93,7 @@ export interface StreetViewMetadata {
 
 export interface TestLocation {
   name: string;
-  lat: number;
-  lng: number;
+  panoId: string;
   expectedDifficulty: number;
 }
 

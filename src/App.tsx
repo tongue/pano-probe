@@ -10,6 +10,7 @@ import { extractFeatures } from './features/location-features';
 import { analyzeDifficulty } from './analyzers/difficulty-analyzer';
 import { combineAnalyses } from './analyzers/ensemble-analyzer';
 import { analyzeWithCLIP, checkBackendHealth } from './ai/clip-analyzer';
+import { getPanoMetadata } from './utils/streetview';
 import { AnalysisState } from './types';
 import './App.css';
 
@@ -35,7 +36,7 @@ function App() {
     });
   }, []);
 
-  const handleAnalyze = async (lat: number, lng: number) => {
+  const handleAnalyze = async (panoId: string) => {
     setState({
       loading: true,
       error: null,
@@ -46,9 +47,21 @@ function App() {
     });
 
     try {
+      // First, get lat/lng from panoId
+      console.log('🔍 Fetching metadata for panoId:', panoId);
+      const metadata = await getPanoMetadata(panoId);
+      
+      if (!metadata) {
+        throw new Error('Could not find Street View panorama with that ID');
+      }
+      
+      console.log('📍 Found location:', metadata.lat, metadata.lng);
+      
+      const { lat, lng } = metadata;
+      
       // Run both analyses in parallel
       const [features, clipAnalysis] = await Promise.all([
-        extractFeatures(lat, lng),
+        extractFeatures(lat, lng, panoId),
         state.backendAvailable ? analyzeWithCLIP(lat, lng) : Promise.resolve(null)
       ]);
       
@@ -86,7 +99,7 @@ function App() {
         <h1>🔍 PanoProbe</h1>
         <p className="tagline">AI-Powered GeoGuessr Difficulty Analyzer</p>
         <p className="subtitle">
-          Analyze location difficulty using OpenStreetMap data, geographic features, and AI vision
+          Analyze panorama difficulty using Street View IDs, AI vision, and geographic intelligence
         </p>
         {state.backendAvailable && (
           <div className="backend-status online">
@@ -131,6 +144,7 @@ function App() {
             <PanoramaPreview 
               lat={state.features.lat}
               lng={state.features.lng}
+              panoId={state.features.panoId}
             />
             
             {state.clipAnalysis && (

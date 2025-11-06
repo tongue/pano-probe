@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { parseCoordinates } from '../utils/helpers';
+import { parsePanoId } from '../utils/helpers';
 
 interface LocationInputProps {
-  onAnalyze: (lat: number, lng: number) => void;
+  onAnalyze: (panoId: string) => void;
   loading: boolean;
 }
 
@@ -13,14 +13,14 @@ export function LocationInput({ onAnalyze, loading }: LocationInputProps) {
   const handleAnalyze = () => {
     setError('');
     
-    const coords = parseCoordinates(input);
+    const panoId = parsePanoId(input);
     
-    if (!coords) {
-      setError('Invalid coordinates. Please enter lat,lng (e.g., 40.758, -73.9855) or paste a Google Maps URL');
+    if (!panoId) {
+      setError('Invalid panorama ID. Please enter a panoId (22 characters) or paste a Google Maps Street View URL');
       return;
     }
     
-    onAnalyze(coords.lat, coords.lng);
+    onAnalyze(panoId);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -35,7 +35,7 @@ export function LocationInput({ onAnalyze, loading }: LocationInputProps) {
         <input
           type="text"
           className="location-input"
-          placeholder="Enter coordinates (lat, lng) or Google Maps URL"
+          placeholder="Enter panorama ID or paste Google Maps Street View URL"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}

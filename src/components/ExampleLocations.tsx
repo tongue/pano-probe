@@ -1,7 +1,7 @@
 import { testLocations } from '../examples/test-locations';
 
 interface ExampleLocationsProps {
-  onSelectLocation: (lat: number, lng: number) => void;
+  onSelectLocation: (panoId: string) => void;
   loading: boolean;
 }
 
@@ -12,14 +12,14 @@ export function ExampleLocations({ onSelectLocation, loading }: ExampleLocations
       <div className="example-grid">
         {testLocations.map((location) => (
           <button
-            key={location.name}
+            key={location.panoId}
             className="example-button"
-            onClick={() => onSelectLocation(location.lat, location.lng)}
+            onClick={() => onSelectLocation(location.panoId)}
             disabled={loading}
           >
             <span className="example-name">{location.name}</span>
             <span className="example-coords">
-              {location.lat.toFixed(3)}, {location.lng.toFixed(3)}
+              {location.panoId}
             </span>
           </button>
         ))}

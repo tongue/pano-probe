@@ -1,9 +1,10 @@
 interface PanoramaPreviewProps {
   lat: number;
   lng: number;
+  panoId?: string;
 }
 
-export function PanoramaPreview({ lat, lng }: PanoramaPreviewProps) {
+export function PanoramaPreview({ lat, lng, panoId }: PanoramaPreviewProps) {
   // Google Street View Static API
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   
@@ -13,14 +14,20 @@ export function PanoramaPreview({ lat, lng }: PanoramaPreviewProps) {
       return null;
     }
     
+    // Use panoId if available for exact match, otherwise use lat/lng
     const params = new URLSearchParams({
       size: '640x400',
-      location: `${lat},${lng}`,
       fov: '90',
       heading: '0',
       pitch: '0',
       key: apiKey
     });
+    
+    if (panoId) {
+      params.set('pano', panoId);
+    } else {
+      params.set('location', `${lat},${lng}`);
+    }
     
     return `https://maps.googleapis.com/maps/api/streetview?${params.toString()}`;
   };
@@ -32,6 +39,7 @@ export function PanoramaPreview({ lat, lng }: PanoramaPreviewProps) {
       <div className="panorama-preview">
         <div className="panorama-placeholder">
           <p>📍 Location: {lat.toFixed(4)}, {lng.toFixed(4)}</p>
+          {panoId && <p>🆔 Pano ID: {panoId}</p>}
           <p className="note">Add Google Maps API key to see Street View preview</p>
         </div>
       </div>
@@ -45,7 +53,7 @@ export function PanoramaPreview({ lat, lng }: PanoramaPreviewProps) {
       <div className="panorama-container">
         <img 
           src={imageUrl} 
-          alt={`Street View at ${lat}, ${lng}`}
+          alt={`Street View panorama`}
           className="panorama-image"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
@@ -59,6 +67,7 @@ export function PanoramaPreview({ lat, lng }: PanoramaPreviewProps) {
       </div>
       <div className="panorama-info">
         <span>📍 {lat.toFixed(6)}, {lng.toFixed(6)}</span>
+        {panoId && <span> • 🆔 {panoId}</span>}
       </div>
     </div>
   );

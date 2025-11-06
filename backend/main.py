@@ -59,6 +59,7 @@ class CLIPAnalysisResponse(BaseModel):
     is_generic: bool
     is_urban: bool
     raw_difficulty_score: float
+    scores: Dict[str, float]  # All 28 prompt scores for verbose display
 
 
 class EnsembleAnalysisResponse(BaseModel):
@@ -164,20 +165,21 @@ async def analyze_location(request: AnalysisRequest):
             
             # Analyze single image
             result = clip_analyzer.analyze_image(image)
-            result = {
-                "difficulty": result["difficulty"],
-                "confidence": result["confidence"],
-                "insights": result["analysis"]["insights"],
-                "scene_type": result["analysis"]["scene_type"],
-                "has_text": result["analysis"]["has_text"],
-                "has_landmark": result["analysis"]["has_landmark"],
-                "is_generic": result["analysis"]["is_generic"],
-                "is_urban": result["analysis"]["is_urban"],
-                "raw_difficulty_score": result["analysis"]["raw_difficulty_score"]
-            }
         
-        # Create CLIP analysis response
-        clip_response = CLIPAnalysisResponse(**result)
+        # Create CLIP analysis response with all scores
+        # Access nested structure from analyze_image result
+        clip_response = CLIPAnalysisResponse(
+            difficulty=result["difficulty"],
+            confidence=result["confidence"],
+            insights=result["analysis"]["insights"],
+            scene_type=result["analysis"]["scene_type"],
+            has_text=result["analysis"]["has_text"],
+            has_landmark=result["analysis"]["has_landmark"],
+            is_generic=result["analysis"]["is_generic"],
+            is_urban=result["analysis"]["is_urban"],
+            raw_difficulty_score=result["analysis"]["raw_difficulty_score"],
+            scores=result["scores"]  # Include all 28 prompt scores
+        )
         
         # For now, just return CLIP results
         # Frontend will combine with heuristics
@@ -186,7 +188,7 @@ async def analyze_location(request: AnalysisRequest):
             combined_difficulty=result["difficulty"],
             combined_confidence=result["confidence"],
             method="clip",
-            reasoning=result["insights"]
+            reasoning=result["analysis"]["insights"]
         )
         
     except HTTPException:

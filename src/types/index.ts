@@ -107,6 +107,7 @@ export interface CLIPAnalysis {
   difficulty: number;
   insights: string[];
   rawDifficultyScore: number;
+  scores?: Record<string, number>;  // All 28 prompt scores for verbose display
 }
 
 export interface AnalysisState {

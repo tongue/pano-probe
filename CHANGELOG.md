@@ -2,6 +2,71 @@
 
 ## [Unreleased] - 2025-11-06
 
+### 📊 Verbose CLIP Analysis Mode
+
+#### Added
+- **Detailed Score Visualization**
+  - All 28 CLIP prompt scores now visible in frontend
+  - Organized into 10 meaningful categories
+  - Color-coded score bars (green = active, gray = inactive)
+  - Top 5 detected features quick view
+  - Toggle button to show/hide detailed analysis
+
+- **Enhanced UI Components**
+  - Score bars with percentage display
+  - Category highlighting for active features
+  - Metadata grid (confidence, scene, raw score, prompts count)
+  - Interactive expand/collapse functionality
+
+- **New Documentation**
+  - `VERBOSE_MODE.md` - Complete guide to verbose display
+
+#### Changed
+- **Backend API**
+  - `CLIPAnalysisResponse` now includes `scores` dict with all 28 prompts
+  - Frontend receives complete analysis data for transparency
+
+- **Frontend Display**
+  - `CLIPResults` component completely redesigned
+  - Summary view + expandable detailed view
+  - Much more informative and professional presentation
+  - 200+ lines of new CSS for score visualization
+
+#### Benefits
+- **Complete Transparency**: See exactly what CLIP detected
+- **Educational**: Learn how AI analyzes images
+- **Debugging**: Validate difficulty predictions
+- **Professional**: Impressive demo presentation
+
+---
+
+### 🎯 GeoGuessr Meta Features: 28 CLIP Prompts
+
+#### Added
+- **18 New CLIP Detection Prompts** (10 → 28 total)
+  - **Road Features**: Bollards, yellow/white lines, roundabouts, km markers
+  - **Infrastructure**: Street lights, power lines, license plates
+  - **Environment**: Palm trees, snow, rice fields, desert
+  - **National**: Country flags and symbols
+  - **Street View**: Google car shadow/reflection detection
+
+#### Changed
+- **Enhanced Difficulty Scoring**
+  - Bollards: -0.7 (country-specific clues!)
+  - Flags: -1.3 (direct country identification)
+  - KM markers: -0.6 (distance information)
+  - License plates: -0.6 (region identification)
+  - Street lights: -0.5 (design varies by country)
+  - Environmental clues: -0.4 each (climate narrowing)
+
+#### Impact
+- **Much more GeoGuessr-specific**: Features experienced players actually use
+- **Better difficulty predictions**: Captures meta knowledge
+- **Comprehensive analysis**: 28 prompts cover all major clue types
+- **Professional-grade**: Now detects bollards, plates, and regional indicators
+
+---
+
 ### 🚀 Major Upgrade: Street View Tiles API Integration
 
 #### Added

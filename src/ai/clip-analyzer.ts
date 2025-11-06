@@ -10,6 +10,7 @@ export interface CLIPAnalysis {
   difficulty: number;
   insights: string[];
   rawDifficultyScore: number;
+  scores?: Record<string, number>;  // All 28 prompt scores for verbose display
 }
 
 export interface EnsembleAnalysis {
@@ -62,6 +63,7 @@ export async function analyzeWithCLIP(
         is_generic: boolean;
         is_urban: boolean;
         raw_difficulty_score: number;
+        scores?: Record<string, number>;
       }
     } = await response.json();
     
@@ -77,6 +79,7 @@ export async function analyzeWithCLIP(
       difficulty: data.clip_analysis.difficulty,
       insights: data.clip_analysis.insights,
       rawDifficultyScore: data.clip_analysis.raw_difficulty_score,
+      scores: data.clip_analysis.scores,
     };
     
   } catch (error) {

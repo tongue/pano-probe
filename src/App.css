@@ -418,8 +418,34 @@
 .panorama-info {
   display: flex;
   justify-content: center;
+  gap: 1rem;
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* Interactive Panorama */
+.interactive-panorama {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.interactive-panorama h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.panorama-viewer {
+  width: 100%;
+  height: 500px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  margin-bottom: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* CLIP Results */

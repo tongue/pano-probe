@@ -22,12 +22,16 @@ Complete guide to get PanoProbe running with full AI-powered CLIP analysis.
 3. Name it "PanoProbe" (or anything you like)
 4. Click "Create"
 
-#### 2. Enable Street View Static API
+#### 2. Enable Required APIs
 
 1. In the console, go to "APIs & Services" → "Library"
-2. Search for "Street View Static API"
-3. Click on it
-4. Click "Enable"
+2. Enable these APIs:
+   - **Street View Static API** (for metadata and fallback)
+   - **Maps JavaScript API** (for interactive panorama viewer)
+3. For each API:
+   - Search for it
+   - Click on it
+   - Click "Enable"
 
 #### 3. Create API Key
 
@@ -35,7 +39,9 @@ Complete guide to get PanoProbe running with full AI-powered CLIP analysis.
 2. Click "Create Credentials" → "API Key"
 3. Copy the API key (looks like: `AIzaSyAbc123...`)
 4. Click "Restrict Key" (recommended):
-   - API restrictions: Select "Street View Static API"
+   - API restrictions: Select both:
+     - "Street View Static API"
+     - "Maps JavaScript API"
    - Save
 
 #### 4. Enable Billing (Required)
@@ -299,6 +305,38 @@ The disagreement is actually interesting - shows what each method sees!
 - Geographic data from Nominatim
 - OSM features (buildings, roads, POIs)
 - Calculated scores (urban score, population density)
+
+---
+
+## Technical Features
+
+### High-Resolution Image Analysis (Tiles API)
+
+PanoProbe uses the **Street View Tiles API** instead of the basic Static API for superior image quality:
+
+**Benefits:**
+- 📸 **2048×1024 resolution** (vs 640×640 static)
+- 🎯 **Better CLIP analysis** - More details = better AI understanding
+- 🆕 **Newer panoramas** - Tiles API often has more recent imagery
+- 💰 **Same cost** - $7 per 1,000 panoramas
+
+**How It Works:**
+1. Backend fetches multiple 512×512 tiles at zoom level 2
+2. Tiles are stitched into a 2048×1024 front-view panorama
+3. CLIP analyzes this high-resolution image
+4. Result: Much more accurate feature detection
+
+### Interactive 360° Panorama Viewer
+
+The frontend displays a fully interactive Street View panorama:
+
+**Features:**
+- 🔄 **Drag to look around** - Full 360° view
+- 🔍 **Scroll to zoom** - Get closer to details
+- 🗺️ **Pan controls** - Explore the location
+- 🎬 **Fullscreen mode** - Immersive viewing
+
+This viewer uses the **Google Maps JavaScript API** to embed the actual Street View panorama, giving you the same experience as Google Maps but integrated into the analysis results.
 
 ---
 

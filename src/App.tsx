@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { LocationInput } from './components/LocationInput';
 import { ExampleLocations } from './components/ExampleLocations';
 import { DifficultyDisplay } from './components/DifficultyDisplay';
-import { PanoramaPreview } from './components/PanoramaPreview';
+import { InteractivePanorama } from './components/InteractivePanorama';
 import { AnalysisResults } from './components/AnalysisResults';
 import { FeatureDisplay } from './components/FeatureDisplay';
 import { CLIPResults } from './components/CLIPResults';
@@ -141,7 +141,7 @@ function App() {
               confidence={state.result.confidence}
             />
             
-            <PanoramaPreview 
+            <InteractivePanorama 
               lat={state.features.lat}
               lng={state.features.lng}
               panoId={state.features.panoId}

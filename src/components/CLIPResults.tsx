@@ -24,82 +24,133 @@ const PROMPT_CATEGORIES: PromptCategory[] = [
     description: "Almost instant identification"
   },
   {
-    name: "Text-Based Clues",
+    name: "Text & Language",
     emoji: "📝",
     prompts: [
       "a photo with clear readable text and signs",
       "a photo with visible business signs and storefronts",
-      "a photo with colored road signs"
+      "a photo with colored road signs",
+      "a photo with Cyrillic alphabet text",
+      "a photo with Arabic or Hebrew script",
+      "a photo with Chinese, Japanese, or Korean characters",
+      "a photo with Thai or Southeast Asian script",
+      "a photo with street name signs",
+      "a photo with advertising billboards"
     ],
-    description: "Strong indicators from text and signage"
+    description: "Text and script detection (instant region ID!)"
   },
   {
-    name: "GeoGuessr Meta",
-    emoji: "🚧",
+    name: "Road Surface & Infrastructure",
+    emoji: "🛣️",
     prompts: [
       "a photo with road bollards or marker posts",
+      "a photo with yellow center line markings",
+      "a photo with white dashed road lines",
+      "a photo with a roundabout or traffic circle",
       "a photo with kilometer markers or mile markers",
-      "a photo with a visible license plate",
-      "a photo with distinctive street lights or lamp posts"
+      "a photo of a dirt or unpaved road",
+      "a photo of a cobblestone or brick paved road",
+      "a photo of a red dirt road",
+      "a photo with metal guardrails or crash barriers",
+      "a photo with wooden guardrails",
+      "a photo with concrete road barriers",
+      "a photo with painted curbs or road edges",
+      "a photo with chevron curve warning signs",
+      "a photo with diagonal striped crosswalks",
+      "a photo with parallel line crosswalks"
     ],
-    description: "Country-specific features players use"
+    description: "Road features & guardrails (expert GeoGuessr meta!)"
   },
   {
-    name: "Architecture & Urban",
+    name: "Architecture & Buildings",
     emoji: "🏗️",
     prompts: [
       "a photo with unique architecture",
-      "a photo of a busy city street with many buildings"
+      "a photo with brick buildings",
+      "a photo with wooden houses",
+      "a photo with concrete apartment blocks",
+      "a photo with terracotta or tile roofs",
+      "a photo with flat concrete roofs",
+      "a photo with corrugated metal roofs",
+      "a photo with modern glass buildings",
+      "a photo with old historical buildings",
+      "a photo of a European city with old architecture",
+      "a photo of a narrow village street"
     ],
-    description: "Building styles and urban density"
+    description: "Building materials and architectural styles"
   },
   {
-    name: "Environmental",
-    emoji: "🌍",
-    prompts: [
-      "a photo with palm trees",
-      "a photo with snow on the ground",
-      "a photo with rice fields or paddy fields",
-      "a photo with desert landscape",
-      "a photo with distinctive vegetation and plants"
-    ],
-    description: "Climate and regional indicators"
-  },
-  {
-    name: "Road Features",
-    emoji: "🛣️",
-    prompts: [
-      "a photo with yellow center line markings",
-      "a photo with white dashed road lines",
-      "a photo with a roundabout or traffic circle"
-    ],
-    description: "Road markings and infrastructure"
-  },
-  {
-    name: "Infrastructure",
+    name: "Utility & Infrastructure",
     emoji: "⚡",
     prompts: [
-      "a photo with overhead power lines"
+      "a photo with overhead power lines",
+      "a photo with distinctive street lights or lamp posts",
+      "a photo with wooden utility poles",
+      "a photo with concrete utility poles",
+      "a photo with electrical transformers on poles",
+      "a photo with tram or trolley wires overhead",
+      "a photo with sidewalks and pedestrian paths",
+      "a photo with street parking spaces"
     ],
-    description: "Utilities and infrastructure"
+    description: "Utility poles and infrastructure (continent ID!)"
   },
   {
-    name: "Street View Specific",
-    emoji: "📸",
+    name: "Environment & Vegetation",
+    emoji: "🌍",
     prompts: [
-      "a photo with a Google Street View car shadow or reflection"
+      "a photo with distinctive vegetation and plants",
+      "a photo with palm trees",
+      "a photo with snow on the ground",
+      "a photo with desert landscape",
+      "a photo with rice fields or paddy fields",
+      "a photo with tropical vegetation and humidity",
+      "a photo with coniferous forest",
+      "a photo with olive trees or Mediterranean plants",
+      "a photo with mountains in the background",
+      "a photo with flat plains landscape",
+      "a photo with vineyards or grape fields",
+      "a photo with wheat or grain fields",
+      "a photo of a coastal or beach setting"
     ],
-    description: "Street View metadata"
+    description: "Climate, vegetation, and geographic features"
   },
   {
-    name: "Hard Indicators",
-    emoji: "🔴",
+    name: "Vehicles & Transport",
+    emoji: "🚗",
     prompts: [
-      "a generic road with no distinctive features",
+      "a photo with a visible license plate",
+      "a photo with a Google Street View car shadow or reflection",
+      "a photo with a tuk-tuk or auto rickshaw",
+      "a photo with pickup trucks",
+      "a photo with motorcycles or scooters"
+    ],
+    description: "Regional vehicles (tuk-tuks = instant Asia!)"
+  },
+  {
+    name: "Urban Characteristics",
+    emoji: "🏙️",
+    prompts: [
+      "a photo of a busy city street with many buildings",
       "a photo of a remote rural area",
-      "a highway or motorway with no landmarks"
+      "a generic road with no distinctive features",
+      "a highway or motorway with no landmarks",
+      "a photo with a wide multi-lane boulevard",
+      "a photo of an Asian city with neon signs",
+      "a photo of a North American suburb with large houses"
     ],
-    description: "Features that make location harder"
+    description: "Urban vs. rural and regional city styles"
+  },
+  {
+    name: "Street Furniture & Misc",
+    emoji: "🪑",
+    prompts: [
+      "a photo with distinctive mailboxes or postal boxes",
+      "a photo with public trash bins or waste containers",
+      "a photo with benches or street seating",
+      "a photo with bus stops or transit shelters",
+      "a photo with red and white striped posts"
+    ],
+    description: "Street furniture and miscellaneous features"
   },
   {
     name: "Image Quality",
@@ -139,6 +190,9 @@ export function CLIPResults({ clipAnalysis }: CLIPResultsProps) {
   const color = getDifficultyColor(clipAnalysis.difficulty);
   const label = getDifficultyLabel(clipAnalysis.difficulty);
 
+  // Calculate total prompts dynamically
+  const totalPrompts = PROMPT_CATEGORIES.reduce((sum, cat) => sum + cat.prompts.length, 0);
+  
   // Get top scores
   const topScores = clipAnalysis.scores 
     ? Object.entries(clipAnalysis.scores)
@@ -181,9 +235,9 @@ export function CLIPResults({ clipAnalysis }: CLIPResultsProps) {
             ))}
           </div>
           <p className="debug-note">
-            Scores shown below are averages across all 8 high-res views. 
+            Scores shown below are averages across all 8 high-res views using 76 expert-level prompts!
             Features detected in ANY direction are marked as present.
-            4× resolution means CLIP can see small details like distant bollards, small signs, and fine text!
+            4× resolution + comprehensive prompts = CLIP can identify scripts, guardrails, poles, roofs, vegetation, and ALL GeoGuessr meta clues!
           </p>
         </div>
       )}
@@ -215,7 +269,7 @@ export function CLIPResults({ clipAnalysis }: CLIPResultsProps) {
             </div>
             <div className="meta-item">
               <span className="meta-label">Prompts:</span>
-              <span className="meta-value">28</span>
+              <span className="meta-value">{totalPrompts}</span>
             </div>
           </div>
         </div>
@@ -259,10 +313,10 @@ export function CLIPResults({ clipAnalysis }: CLIPResultsProps) {
       {/* Detailed Verbose View */}
       {showDetails && clipAnalysis.scores && (
         <div className="clip-detailed-scores">
-          <h4>📋 Complete Analysis (28 Prompts):</h4>
+          <h4>📋 Complete Analysis ({totalPrompts} Expert-Level Prompts):</h4>
           <p className="detail-explanation">
             Scores represent CLIP's confidence that each feature is present in the image.
-            Active features (green) are above the 15% threshold.
+            Active features (green) are above the 15% threshold. Organized by category for expert GeoGuessr analysis.
           </p>
           
           {PROMPT_CATEGORIES.map((category) => {

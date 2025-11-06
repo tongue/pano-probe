@@ -16,6 +16,16 @@ import logging
 from clip_analyzer import CLIPLocationAnalyzer
 from streetview_fetcher import StreetViewFetcher
 
+# Try to import OCR - optional dependency
+try:
+    from ocr_analyzer import OCRTextAnalyzer
+    OCR_AVAILABLE = True
+except ImportError:
+    logger = logging.getLogger(__name__)
+    logger.warning("EasyOCR not installed. Install with: pip install easyocr")
+    OCRTextAnalyzer = None
+    OCR_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +53,7 @@ app.add_middleware(
 # Global instances (initialized on startup)
 clip_analyzer: Optional[CLIPLocationAnalyzer] = None
 streetview_fetcher: Optional[StreetViewFetcher] = None
+ocr_analyzer: Optional[OCRTextAnalyzer] = None
 
 
 # Request/Response models
@@ -77,7 +88,7 @@ class EnsembleAnalysisResponse(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize models on startup"""
-    global clip_analyzer, streetview_fetcher
+    global clip_analyzer, streetview_fetcher, ocr_analyzer
     
     # Get API key from environment
     api_key = os.getenv("GOOGLE_MAPS_API_KEY")
@@ -85,15 +96,30 @@ async def startup_event():
         logger.warning("GOOGLE_MAPS_API_KEY not set. Street View fetching will be disabled.")
     else:
         streetview_fetcher = StreetViewFetcher(api_key)
-        logger.info("Street View fetcher initialized")
+        logger.info("✓ Street View fetcher initialized")
     
     # Initialize CLIP model
     try:
         clip_analyzer = CLIPLocationAnalyzer()
-        logger.info("CLIP analyzer initialized successfully")
+        logger.info("✓ CLIP analyzer initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize CLIP: {e}")
         # Continue without CLIP - will return errors on analysis requests
+    
+    # Initialize OCR analyzer (if available)
+    if OCR_AVAILABLE and OCRTextAnalyzer:
+        try:
+            logger.info("🔤 Initializing EasyOCR (this may take a minute on first run)...")
+            ocr_analyzer = OCRTextAnalyzer(languages=['en'], gpu=False)
+            logger.info("✓ OCR analyzer initialized successfully")
+        except Exception as e:
+            logger.warning(f"OCR initialization failed: {e}")
+            logger.warning("Text detection will rely on CLIP only (less accurate)")
+            # Continue without OCR - CLIP will handle text detection (poorly)
+    else:
+        logger.warning("⚠️ EasyOCR not installed")
+        logger.warning("To enable OCR text detection, run: pip install easyocr")
+        logger.warning("Text detection will rely on CLIP only (less accurate)")
 
 
 @app.get("/")
@@ -102,7 +128,8 @@ async def root():
     return {
         "status": "online",
         "clip_available": clip_analyzer is not None,
-        "streetview_available": streetview_fetcher is not None
+        "streetview_available": streetview_fetcher is not None,
+        "ocr_available": ocr_analyzer is not None
     }
 
 
@@ -177,7 +204,48 @@ async def analyze_location(request: AnalysisRequest):
                 detail="CLIP analysis failed"
             )
         
-        logger.info(f"✅ 360° analysis complete! Difficulty: {result['difficulty']}/5")
+        logger.info(f"✅ CLIP 360° analysis complete! Difficulty: {result['difficulty']}/5")
+        
+        # ENHANCE WITH OCR - Actually read text from images!
+        if ocr_analyzer:
+            logger.info("🔤 Running OCR text detection on all 8 views...")
+            ocr_result = ocr_analyzer.analyze_multiple_views(images)
+            
+            if ocr_result['has_text']:
+                logger.info(f"✓ OCR found text in {ocr_result['views_with_text']}/8 views ({ocr_result['total_words']} words total)")
+                
+                # Override CLIP's text detection with OCR results (OCR is more accurate!)
+                result['analysis']['has_text'] = True
+                
+                # Add OCR insights
+                ocr_insight = f"📝 OCR: Found text in {ocr_result['views_with_text']}/8 views ({ocr_result['total_words']} words, {ocr_result['avg_confidence']:.0%} confidence)"
+                if ocr_insight not in result['analysis']['insights']:
+                    result['analysis']['insights'].insert(0, ocr_insight)  # Add at top
+                
+                # Boost text-related CLIP scores with OCR confidence
+                # This makes CLIP's aggregated scores reflect the OCR reality
+                result['scores']['a photo with clear readable text and signs'] = max(
+                    result['scores']['a photo with clear readable text and signs'],
+                    ocr_result['avg_confidence']
+                )
+                result['scores']['a photo with visible business signs and storefronts'] = max(
+                    result['scores']['a photo with visible business signs and storefronts'],
+                    ocr_result['avg_confidence'] * 0.8  # Slightly lower weight
+                )
+                
+                # Recalculate difficulty with enhanced text detection
+                # Text makes locations easier - reduce difficulty if OCR found substantial text
+                if ocr_result['total_words'] > 10 and ocr_result['avg_confidence'] > 0.5:
+                    # Significant readable text found - this is an easier location
+                    old_difficulty = result['difficulty']
+                    result['difficulty'] = max(1, result['difficulty'] - 1)
+                    if result['difficulty'] != old_difficulty:
+                        logger.info(f"  ↓ Difficulty adjusted {old_difficulty} → {result['difficulty']} (OCR found readable text)")
+                        result['analysis']['insights'].append(f"⬇️ Difficulty reduced due to readable text")
+            else:
+                logger.info("  No significant text detected by OCR")
+        else:
+            logger.warning("  OCR not available - text detection may be inaccurate")
         
         # Convert all images to base64 for debugging (TEMPORARY - for verification)
         # Lower quality for debug images to reduce bandwidth (they're large at zoom 4!)
@@ -191,7 +259,7 @@ async def analyze_location(request: AnalysisRequest):
                 debug_img.save(buffered, format="JPEG", quality=70)
                 debug_images[direction] = base64.b64encode(buffered.getvalue()).decode('utf-8')
         
-        # Create CLIP analysis response with all scores
+        # Create CLIP analysis response with all scores (now enhanced with OCR!)
         clip_response = CLIPAnalysisResponse(
             difficulty=result["difficulty"],
             confidence=result["confidence"],

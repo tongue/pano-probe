@@ -108,6 +108,7 @@ export interface CLIPAnalysis {
   insights: string[];
   rawDifficultyScore: number;
   scores?: Record<string, number>;  // All 28 prompt scores for verbose display
+  analyzedImages?: Record<string, string>;  // Base64 encoded images for debugging (N,E,S,W)
 }
 
 export interface AnalysisState {

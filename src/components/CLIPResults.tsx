@@ -158,6 +158,36 @@ export function CLIPResults({ clipAnalysis }: CLIPResultsProps) {
         </button>
       </div>
 
+      {/* DEBUG: Show all 8 analyzed images (complete 360° coverage) */}
+      {clipAnalysis.analyzedImages && (
+        <div className="analyzed-image-debug">
+          <h4>🔄 Complete 360° Analysis - All 8 Directions (Debug View):</h4>
+          <p className="debug-note" style={{ marginBottom: '1rem' }}>
+            CLIP analyzed 8 directions (every 45°) at HIGH RESOLUTION for complete coverage.
+            Each view is 90° FOV at 2048×4096 resolution (zoom 4). No gaps, overlapping views!
+          </p>
+          <div className="eight-directions-grid">
+            {['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'].map((direction) => (
+              clipAnalysis.analyzedImages![direction] && (
+                <div key={direction} className="direction-view">
+                  <h5>{direction.toUpperCase().replace('NORTH', 'N').replace('SOUTH', 'S').replace('EAST', 'E').replace('WEST', 'W')}</h5>
+                  <img 
+                    src={`data:image/jpeg;base64,${clipAnalysis.analyzedImages![direction]}`}
+                    alt={`${direction} view`}
+                    className="clip-debug-image-small"
+                  />
+                </div>
+              )
+            ))}
+          </div>
+          <p className="debug-note">
+            Scores shown below are averages across all 8 high-res views. 
+            Features detected in ANY direction are marked as present.
+            4× resolution means CLIP can see small details like distant bollards, small signs, and fine text!
+          </p>
+        </div>
+      )}
+
       {/* Summary View */}
       <div className="clip-summary">
         <div className="clip-score-container">

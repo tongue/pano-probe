@@ -11,6 +11,7 @@ export interface CLIPAnalysis {
   insights: string[];
   rawDifficultyScore: number;
   scores?: Record<string, number>;  // All 28 prompt scores for verbose display
+  analyzedImages?: Record<string, string>;  // Base64 encoded images for debugging (N,E,S,W)
 }
 
 export interface EnsembleAnalysis {
@@ -64,10 +65,11 @@ export async function analyzeWithCLIP(
         is_urban: boolean;
         raw_difficulty_score: number;
         scores?: Record<string, number>;
+        analyzed_images?: Record<string, string>;
       }
     } = await response.json();
     
-    console.log('✅ CLIP analysis received:', data);
+    console.log('✅ CLIP 360° analysis received:', data);
     
     return {
       hasText: data.clip_analysis.has_text,
@@ -80,6 +82,7 @@ export async function analyzeWithCLIP(
       insights: data.clip_analysis.insights,
       rawDifficultyScore: data.clip_analysis.raw_difficulty_score,
       scores: data.clip_analysis.scores,
+      analyzedImages: data.clip_analysis.analyzed_images,
     };
     
   } catch (error) {

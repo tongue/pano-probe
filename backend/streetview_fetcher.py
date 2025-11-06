@@ -128,4 +128,28 @@ class StreetViewFetcher:
             PIL Image (2048x1024) or None
         """
         return self.fetch_panorama(lat, lng)
+    
+    def fetch_360_views(self, pano_id: str, zoom: int = 4) -> Optional[dict]:
+        """
+        Fetch 8 directional views (N, NE, E, SE, S, SW, W, NW) for complete 360° analysis
+        
+        Args:
+            pano_id: Panorama ID
+            zoom: Zoom level (default 4 for 8192×4096 high resolution)
+                  - 2: 2048×1024 (fast, good)
+                  - 3: 4096×2048 (better)
+                  - 4: 8192×4096 (excellent) ← Recommended
+                  - 5: 16384×8192 (maximum, slow)
+            
+        Returns:
+            Dict with 8 direction keys containing PIL Images
+            or None if fetch fails
+        """
+        try:
+            print(f"🔍 Fetching panorama at zoom level {zoom} (higher = better quality)...")
+            views = self.tiles_api.get_eight_directions(pano_id, zoom=zoom)
+            return views
+        except Exception as e:
+            print(f"Error fetching 360° views: {e}")
+            return None
 

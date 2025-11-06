@@ -350,7 +350,7 @@ class CLIPLocationAnalyzer:
             images: List of PIL Images
             
         Returns:
-            Aggregated analysis
+            Aggregated analysis with same structure as analyze_image
         """
         if not images:
             return None
@@ -361,6 +361,7 @@ class CLIPLocationAnalyzer:
         # Aggregate results
         avg_difficulty = np.mean([a["difficulty"] for a in analyses])
         avg_confidence = np.mean([a["confidence"] for a in analyses])
+        avg_raw_score = np.mean([a["analysis"]["raw_difficulty_score"] for a in analyses])
         
         # Combine insights (unique only)
         all_insights = []
@@ -368,10 +369,38 @@ class CLIPLocationAnalyzer:
             all_insights.extend(analysis["analysis"]["insights"])
         unique_insights = list(set(all_insights))
         
+        # Aggregate scores (average across all views)
+        aggregated_scores = {}
+        for prompt in self.DIFFICULTY_PROMPTS:
+            avg_score = np.mean([a["scores"][prompt] for a in analyses])
+            aggregated_scores[prompt] = float(avg_score)
+        
+        # Aggregate binary features (true if detected in any view)
+        has_text = any(a["analysis"]["has_text"] for a in analyses)
+        has_landmark = any(a["analysis"]["has_landmark"] for a in analyses)
+        is_generic = any(a["analysis"]["is_generic"] for a in analyses)
+        is_urban = any(a["analysis"]["is_urban"] for a in analyses)
+        
+        # Most common scene type
+        scene_types = [a["analysis"]["scene_type"] for a in analyses]
+        most_common_scene = max(set(scene_types), key=scene_types.count)
+        
+        # Return in same format as analyze_image
         return {
             "difficulty": round(avg_difficulty),
             "confidence": avg_confidence,
-            "insights": unique_insights,
+            "scores": aggregated_scores,
+            "analysis": {
+                "difficulty": round(avg_difficulty),
+                "confidence": avg_confidence,
+                "has_text": has_text,
+                "has_landmark": has_landmark,
+                "is_generic": is_generic,
+                "is_urban": is_urban,
+                "scene_type": most_common_scene,
+                "insights": unique_insights,
+                "raw_difficulty_score": avg_raw_score
+            },
             "individual_analyses": analyses,
             "num_views": len(images)
         }

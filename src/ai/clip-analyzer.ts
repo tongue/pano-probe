@@ -1,41 +1,102 @@
-// Mock CLIP analyzer for future integration
-// In production, this would call a backend service running CLIP model
+// CLIP analyzer - calls Python backend with CLIP model
 
 export interface CLIPAnalysis {
   hasText: boolean;
   hasLandmark: boolean;
   isGeneric: boolean;
+  isUrban: boolean;
   sceneType: string;
   confidence: number;
   difficulty: number;
+  insights: string[];
+  rawDifficultyScore: number;
 }
 
-// This is a placeholder that returns mock results
-// In a real implementation, this would:
-// 1. Send the image to a backend service
-// 2. Run CLIP inference with difficulty-related prompts
-// 3. Return semantic understanding of the image
-export async function analyzewithCLIP(imageUrl: string): Promise<CLIPAnalysis> {
-  console.log('CLIP analysis not yet implemented. Using mock data.');
-  console.log('Image URL:', imageUrl);
-  
-  // For future implementation:
-  // const response = await fetch('/api/clip/analyze', {
-  //   method: 'POST',
-  //   body: JSON.stringify({ imageUrl }),
-  //   headers: { 'Content-Type': 'application/json' }
-  // });
-  // return await response.json();
-  
-  // Mock response for now
-  return {
-    hasText: false,
-    hasLandmark: false,
-    isGeneric: true,
-    sceneType: 'unknown',
-    confidence: 0.5,
-    difficulty: 3,
-  };
+export interface EnsembleAnalysis {
+  clipAnalysis: CLIPAnalysis | null;
+  combinedDifficulty: number;
+  combinedConfidence: number;
+  method: 'clip' | 'ensemble' | 'heuristic';
+  reasoning: string[];
+}
+
+// Backend API configuration
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+
+export async function analyzeWithCLIP(
+  lat: number, 
+  lng: number,
+  numViews: number = 1
+): Promise<CLIPAnalysis | null> {
+  try {
+    console.log(`🤖 Calling CLIP backend for: ${lat}, ${lng}`);
+    
+    const response = await fetch(`${BACKEND_URL}/api/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ lat, lng, num_views: numViews }),
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn('No Street View imagery available for this location');
+        return null;
+      }
+      if (response.status === 503) {
+        console.warn('CLIP backend not available');
+        return null;
+      }
+      throw new Error(`Backend error: ${response.status}`);
+    }
+    
+    const data: {
+      clip_analysis: {
+        difficulty: number;
+        confidence: number;
+        insights: string[];
+        scene_type: string;
+        has_text: boolean;
+        has_landmark: boolean;
+        is_generic: boolean;
+        is_urban: boolean;
+        raw_difficulty_score: number;
+      }
+    } = await response.json();
+    
+    console.log('✅ CLIP analysis received:', data);
+    
+    return {
+      hasText: data.clip_analysis.has_text,
+      hasLandmark: data.clip_analysis.has_landmark,
+      isGeneric: data.clip_analysis.is_generic,
+      isUrban: data.clip_analysis.is_urban,
+      sceneType: data.clip_analysis.scene_type,
+      confidence: data.clip_analysis.confidence,
+      difficulty: data.clip_analysis.difficulty,
+      insights: data.clip_analysis.insights,
+      rawDifficultyScore: data.clip_analysis.raw_difficulty_score,
+    };
+    
+  } catch (error) {
+    console.error('Error calling CLIP backend:', error);
+    return null;
+  }
+}
+
+// Check if backend is available
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(3000), // 3 second timeout
+    });
+    return response.ok;
+  } catch (error) {
+    console.warn('Backend not available:', error);
+    return false;
+  }
 }
 
 // Future prompts to use with CLIP:

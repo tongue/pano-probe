@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LocationInput } from './components/LocationInput';
 import { ExampleLocations } from './components/ExampleLocations';
 import { DifficultyDisplay } from './components/DifficultyDisplay';
 import { AnalysisResults } from './components/AnalysisResults';
 import { FeatureDisplay } from './components/FeatureDisplay';
+import { CLIPResults } from './components/CLIPResults';
 import { extractFeatures } from './features/location-features';
 import { analyzeDifficulty } from './analyzers/difficulty-analyzer';
+import { combineAnalyses } from './analyzers/ensemble-analyzer';
+import { analyzeWithCLIP, checkBackendHealth } from './ai/clip-analyzer';
 import { AnalysisState } from './types';
 import './App.css';
 
@@ -15,7 +18,21 @@ function App() {
     error: null,
     features: null,
     result: null,
+    clipAnalysis: null,
+    backendAvailable: false,
   });
+
+  // Check backend availability on mount
+  useEffect(() => {
+    checkBackendHealth().then(available => {
+      setState(prev => ({ ...prev, backendAvailable: available }));
+      if (available) {
+        console.log('✅ CLIP backend is available');
+      } else {
+        console.log('⚠️ CLIP backend not available - using heuristics only');
+      }
+    });
+  }, []);
 
   const handleAnalyze = async (lat: number, lng: number) => {
     setState({
@@ -23,20 +40,32 @@ function App() {
       error: null,
       features: null,
       result: null,
+      clipAnalysis: null,
+      backendAvailable: state.backendAvailable,
     });
 
     try {
-      // Extract features from the location
-      const features = await extractFeatures(lat, lng);
+      // Run both analyses in parallel
+      const [features, clipAnalysis] = await Promise.all([
+        extractFeatures(lat, lng),
+        state.backendAvailable ? analyzeWithCLIP(lat, lng) : Promise.resolve(null)
+      ]);
       
-      // Analyze difficulty based on features
-      const result = analyzeDifficulty(features);
+      // Get heuristic-based difficulty
+      const heuristicResult = analyzeDifficulty(features);
+      
+      // Combine with CLIP if available
+      const finalResult = clipAnalysis 
+        ? combineAnalyses(heuristicResult, clipAnalysis)
+        : heuristicResult;
       
       setState({
         loading: false,
         error: null,
         features,
-        result,
+        result: finalResult,
+        clipAnalysis,
+        backendAvailable: state.backendAvailable,
       });
     } catch (error) {
       setState({
@@ -44,6 +73,8 @@ function App() {
         error: error instanceof Error ? error.message : 'An error occurred during analysis',
         features: null,
         result: null,
+        clipAnalysis: null,
+        backendAvailable: state.backendAvailable,
       });
     }
   };
@@ -54,8 +85,18 @@ function App() {
         <h1>🔍 PanoProbe</h1>
         <p className="tagline">AI-Powered GeoGuessr Difficulty Analyzer</p>
         <p className="subtitle">
-          Analyze location difficulty using OpenStreetMap data, geographic features, and heuristics
+          Analyze location difficulty using OpenStreetMap data, geographic features, and AI vision
         </p>
+        {state.backendAvailable && (
+          <div className="backend-status online">
+            🤖 CLIP AI: Online
+          </div>
+        )}
+        {!state.backendAvailable && (
+          <div className="backend-status offline">
+            ⚠️ CLIP AI: Offline (using heuristics only)
+          </div>
+        )}
       </header>
 
       <main className="app-main">
@@ -85,6 +126,11 @@ function App() {
               difficulty={state.result.difficulty}
               confidence={state.result.confidence}
             />
+            
+            {state.clipAnalysis && (
+              <CLIPResults clipAnalysis={state.clipAnalysis} />
+            )}
+            
             <AnalysisResults result={state.result} />
             <FeatureDisplay features={state.features} />
           </section>
@@ -93,10 +139,10 @@ function App() {
 
       <footer className="app-footer">
         <p>
-          Built for hack day • Data from OpenStreetMap & Nominatim
+          Built for hack day • Using: {state.clipAnalysis ? 'AI + Heuristics Ensemble' : 'Heuristics'}
         </p>
         <p className="footer-note">
-          Future: Add computer vision (CLIP) and real player performance data
+          Data from OpenStreetMap, Nominatim {state.clipAnalysis ? '& CLIP Vision AI' : ''}
         </p>
       </footer>
     </div>

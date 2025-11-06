@@ -98,10 +98,24 @@ export interface TestLocation {
   expectedDifficulty: number;
 }
 
+export interface CLIPAnalysis {
+  hasText: boolean;
+  hasLandmark: boolean;
+  isGeneric: boolean;
+  isUrban: boolean;
+  sceneType: string;
+  confidence: number;
+  difficulty: number;
+  insights: string[];
+  rawDifficultyScore: number;
+}
+
 export interface AnalysisState {
   loading: boolean;
   error: string | null;
   features: LocationFeatures | null;
   result: DifficultyResult | null;
+  clipAnalysis: CLIPAnalysis | null;
+  backendAvailable: boolean;
 }
 

@@ -8,6 +8,10 @@ from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
 from typing import Dict, List
 import numpy as np
+import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CLIPLocationAnalyzer:
@@ -119,7 +123,15 @@ class CLIPLocationAnalyzer:
             model_name: Hugging Face model identifier
         """
         print(f"Loading CLIP model: {model_name}...")
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        # Detect best available device: CUDA (NVIDIA) > MPS (Apple Silicon) > CPU
+        if torch.cuda.is_available():
+            self.device = "cuda"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            self.device = "mps"
+        else:
+            self.device = "cpu"
+        
         print(f"Using device: {self.device}")
         
         self.model = CLIPModel.from_pretrained(model_name).to(self.device)
@@ -677,10 +689,31 @@ class CLIPLocationAnalyzer:
             Aggregated analysis with same structure as analyze_image
         """
         if not images:
+            logger.warning("⚠️ No images provided to CLIP analyzer!")
             return None
         
+        logger.info(f"🔍 CLIP analyzing {len(images)} images with {len(self.DIFFICULTY_PROMPTS)} prompts each...")
+        logger.info(f"   Expected time: ~{len(images) * 5}s (5s per image)")
+        
         # Analyze each image
-        analyses = [self.analyze_image(img) for img in images]
+        analyses = []
+        total_start = time.time()
+        
+        for i, img in enumerate(images, 1):
+            logger.info(f"  📸 Analyzing image {i}/{len(images)}...")
+            start = time.time()
+            
+            try:
+                analysis = self.analyze_image(img)
+                elapsed = time.time() - start
+                logger.info(f"    ✓ Image {i} done in {elapsed:.1f}s (Difficulty: {analysis['difficulty']}/5)")
+                analyses.append(analysis)
+            except Exception as e:
+                logger.error(f"    ❌ Error analyzing image {i}: {e}")
+                raise
+        
+        total_elapsed = time.time() - total_start
+        logger.info(f"✅ All {len(images)} images analyzed in {total_elapsed:.1f}s")
         
         # Aggregate results
         avg_difficulty = np.mean([a["difficulty"] for a in analyses])

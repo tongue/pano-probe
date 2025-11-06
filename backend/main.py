@@ -27,7 +27,7 @@ except ImportError:
     OCR_AVAILABLE = False
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)  # Back to INFO level
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
@@ -53,7 +53,7 @@ app.add_middleware(
 # Global instances (initialized on startup)
 clip_analyzer: Optional[CLIPLocationAnalyzer] = None
 streetview_fetcher: Optional[StreetViewFetcher] = None
-ocr_analyzer: Optional[OCRTextAnalyzer] = None
+ocr_analyzer: Optional[OCRTextAnalyzer] = None  # Single English-only OCR instance
 
 
 # Request/Response models
@@ -85,6 +85,8 @@ class EnsembleAnalysisResponse(BaseModel):
     reasoning: List[str]
 
 
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize models on startup"""
@@ -106,16 +108,29 @@ async def startup_event():
         logger.error(f"Failed to initialize CLIP: {e}")
         # Continue without CLIP - will return errors on analysis requests
     
-    # Initialize OCR analyzer (if available)
+    # Initialize English-only OCR (fast and simple!)
     if OCR_AVAILABLE and OCRTextAnalyzer:
         try:
-            logger.info("🔤 Initializing EasyOCR (this may take a minute on first run)...")
-            ocr_analyzer = OCRTextAnalyzer(languages=['en'], gpu=False)
-            logger.info("✓ OCR analyzer initialized successfully")
+            # Try GPU first (works on M1/M2 Macs and NVIDIA)
+            import torch
+            use_gpu = torch.cuda.is_available() or (hasattr(torch.backends, 'mps') and torch.backends.mps.is_available())
+            
+            if use_gpu:
+                logger.info("📝 Initializing English OCR with GPU acceleration...")
+                try:
+                    ocr_analyzer = OCRTextAnalyzer(languages=['en'], gpu=True)
+                    logger.info("✓ English OCR ready with GPU! (will detect text presence even in other languages)")
+                except Exception as gpu_error:
+                    logger.warning(f"⚠️ GPU OCR failed ({gpu_error}), falling back to CPU...")
+                    ocr_analyzer = OCRTextAnalyzer(languages=['en'], gpu=False)
+                    logger.info("✓ English OCR ready with CPU (will detect text presence even in other languages)")
+            else:
+                logger.info("📝 Initializing English OCR (detects text in any language)...")
+                ocr_analyzer = OCRTextAnalyzer(languages=['en'], gpu=False)
+                logger.info("✓ English OCR ready! (will detect text presence even in other languages)")
         except Exception as e:
-            logger.warning(f"OCR initialization failed: {e}")
+            logger.warning(f"⚠️ OCR initialization failed: {e}")
             logger.warning("Text detection will rely on CLIP only (less accurate)")
-            # Continue without OCR - CLIP will handle text detection (poorly)
     else:
         logger.warning("⚠️ EasyOCR not installed")
         logger.warning("To enable OCR text detection, run: pip install easyocr")
@@ -129,7 +144,8 @@ async def root():
         "status": "online",
         "clip_available": clip_analyzer is not None,
         "streetview_available": streetview_fetcher is not None,
-        "ocr_available": ocr_analyzer is not None
+        "ocr_available": ocr_analyzer is not None,
+        "ocr_type": "English-only (fast, detects text in any language)"
     }
 
 
@@ -206,46 +222,47 @@ async def analyze_location(request: AnalysisRequest):
         
         logger.info(f"✅ CLIP 360° analysis complete! Difficulty: {result['difficulty']}/5")
         
-        # ENHANCE WITH OCR - Actually read text from images!
+        # ENHANCE WITH OCR - Fast English-only text detection
         if ocr_analyzer:
-            logger.info("🔤 Running OCR text detection on all 8 views...")
-            ocr_result = ocr_analyzer.analyze_multiple_views(images)
+            logger.info("📝 Running English OCR on all 8 views (detects text in any language)...")
             
-            if ocr_result['has_text']:
-                logger.info(f"✓ OCR found text in {ocr_result['views_with_text']}/8 views ({ocr_result['total_words']} words total)")
+            try:
+                ocr_result = ocr_analyzer.analyze_multiple_views(images)
                 
-                # Override CLIP's text detection with OCR results (OCR is more accurate!)
-                result['analysis']['has_text'] = True
-                
-                # Add OCR insights
-                ocr_insight = f"📝 OCR: Found text in {ocr_result['views_with_text']}/8 views ({ocr_result['total_words']} words, {ocr_result['avg_confidence']:.0%} confidence)"
-                if ocr_insight not in result['analysis']['insights']:
-                    result['analysis']['insights'].insert(0, ocr_insight)  # Add at top
-                
-                # Boost text-related CLIP scores with OCR confidence
-                # This makes CLIP's aggregated scores reflect the OCR reality
-                result['scores']['a photo with clear readable text and signs'] = max(
-                    result['scores']['a photo with clear readable text and signs'],
-                    ocr_result['avg_confidence']
-                )
-                result['scores']['a photo with visible business signs and storefronts'] = max(
-                    result['scores']['a photo with visible business signs and storefronts'],
-                    ocr_result['avg_confidence'] * 0.8  # Slightly lower weight
-                )
-                
-                # Recalculate difficulty with enhanced text detection
-                # Text makes locations easier - reduce difficulty if OCR found substantial text
-                if ocr_result['total_words'] > 10 and ocr_result['avg_confidence'] > 0.5:
-                    # Significant readable text found - this is an easier location
-                    old_difficulty = result['difficulty']
-                    result['difficulty'] = max(1, result['difficulty'] - 1)
-                    if result['difficulty'] != old_difficulty:
-                        logger.info(f"  ↓ Difficulty adjusted {old_difficulty} → {result['difficulty']} (OCR found readable text)")
-                        result['analysis']['insights'].append(f"⬇️ Difficulty reduced due to readable text")
-            else:
-                logger.info("  No significant text detected by OCR")
+                if ocr_result['total_words'] > 0:
+                    logger.info(f"✅ OCR complete! Found {ocr_result['total_words']} words in {ocr_result['views_with_text']}/8 views ({ocr_result['avg_confidence']:.0%} confidence)")
+                    
+                    # Override CLIP's text detection with OCR results (OCR is more accurate!)
+                    result['analysis']['has_text'] = True
+                    
+                    # Add OCR insight
+                    ocr_insight = f"📝 OCR: Found {ocr_result['total_words']} words in {ocr_result['views_with_text']}/8 views ({ocr_result['avg_confidence']:.0%} confidence)"
+                    if ocr_insight not in result['analysis']['insights']:
+                        result['analysis']['insights'].insert(0, ocr_insight)  # Add at top
+                    
+                    # Boost text-related CLIP scores with OCR confidence
+                    result['scores']['a photo with clear readable text and signs'] = max(
+                        result['scores']['a photo with clear readable text and signs'],
+                        ocr_result['avg_confidence']
+                    )
+                    result['scores']['a photo with visible business signs and storefronts'] = max(
+                        result['scores']['a photo with visible business signs and storefronts'],
+                        ocr_result['avg_confidence'] * 0.8
+                    )
+                    
+                    # Recalculate difficulty with enhanced text detection
+                    if ocr_result['total_words'] > 10 and ocr_result['avg_confidence'] > 0.5:
+                        old_difficulty = result['difficulty']
+                        result['difficulty'] = max(1, result['difficulty'] - 1)
+                        if result['difficulty'] != old_difficulty:
+                            logger.info(f"  ↓ Difficulty adjusted {old_difficulty} → {result['difficulty']} (OCR found readable text)")
+                            result['analysis']['insights'].append(f"⬇️ Difficulty reduced due to readable text")
+                else:
+                    logger.info("  No text detected by OCR")
+            except Exception as e:
+                logger.warning(f"⚠️ OCR analysis failed: {e}")
         else:
-            logger.warning("  OCR not available - text detection may be inaccurate")
+            logger.warning("  OCR not available - text detection relies on CLIP only")
         
         # Convert all images to base64 for debugging (TEMPORARY - for verification)
         # Lower quality for debug images to reduce bandwidth (they're large at zoom 4!)

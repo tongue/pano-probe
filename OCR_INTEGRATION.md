@@ -194,22 +194,59 @@ print(results)
 
 ### Languages
 
-**English only (fastest):**
+**Default (Multilingual for GeoGuessr):**
+```python
+ocr = OCRTextAnalyzer(languages=['en', 'ja', 'ch_sim', 'ko', 'th'])
+```
+Covers: English, Japanese, Chinese, Korean, Thai - the most common scripts in GeoGuessr!
+
+**English only (fastest, but misses Asian text):**
 ```python
 ocr = OCRTextAnalyzer(languages=['en'])
 ```
 
-**Multiple languages:**
+**Asian languages:**
 ```python
-ocr = OCRTextAnalyzer(languages=['en', 'es', 'fr'])
+# Japanese
+ocr = OCRTextAnalyzer(languages=['en', 'ja'])
+
+# Chinese Simplified
+ocr = OCRTextAnalyzer(languages=['en', 'ch_sim'])
+
+# Chinese Traditional
+ocr = OCRTextAnalyzer(languages=['en', 'ch_tra'])
+
+# Korean
+ocr = OCRTextAnalyzer(languages=['en', 'ko'])
+
+# Thai
+ocr = OCRTextAnalyzer(languages=['en', 'th'])
+
+# All Asian
+ocr = OCRTextAnalyzer(languages=['en', 'ja', 'ch_sim', 'ko', 'th'])
 ```
 
-**All European languages:**
+**European languages:**
 ```python
 ocr = OCRTextAnalyzer(languages=['en', 'es', 'fr', 'de', 'it', 'pt'])
 ```
 
+**Cyrillic (Russian, etc.):**
+```python
+ocr = OCRTextAnalyzer(languages=['en', 'ru'])
+```
+
+**Arabic:**
+```python
+ocr = OCRTextAnalyzer(languages=['en', 'ar'])
+```
+
 **Note:** More languages = slower initialization and analysis
+- 1 language: ~500MB, ~3s per image
+- 5 languages: ~1.5GB, ~5s per image
+- 10+ languages: ~3GB+, ~8s per image
+
+**Trade-off**: For GeoGuessr, multilingual (en+ja+ch_sim+ko+th) is worth it!
 
 ### GPU Acceleration
 

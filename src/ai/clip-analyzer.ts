@@ -12,6 +12,8 @@ export interface CLIPAnalysis {
   rawDifficultyScore: number;
   scores?: Record<string, number>;  // All 28 prompt scores for verbose display
   analyzedImages?: Record<string, string>;  // Base64 encoded images for debugging (N,E,S,W)
+  ocrText?: string;  // Debug: All text detected by OCR
+  cityNameChecked?: string;  // Debug: What city name was checked
 }
 
 export interface EnsembleAnalysis {
@@ -28,17 +30,26 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 export async function analyzeWithCLIP(
   lat: number, 
   lng: number,
-  numViews: number = 1
+  numViews: number = 1,
+  cityName?: string
 ): Promise<CLIPAnalysis | null> {
   try {
     console.log(`🤖 Calling CLIP backend for: ${lat}, ${lng}`);
+    if (cityName) {
+      console.log(`   🏙️ Will check for city name: "${cityName}"`);
+    }
     
     const response = await fetch(`${BACKEND_URL}/api/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ lat, lng, num_views: numViews }),
+      body: JSON.stringify({ 
+        lat, 
+        lng, 
+        num_views: numViews,
+        city_name: cityName || null
+      }),
     });
     
     if (!response.ok) {
@@ -66,10 +77,23 @@ export async function analyzeWithCLIP(
         raw_difficulty_score: number;
         scores?: Record<string, number>;
         analyzed_images?: Record<string, string>;
+        ocr_text?: string;
+        city_name_checked?: string;
       }
     } = await response.json();
     
     console.log('✅ CLIP 360° analysis received:', data);
+    
+    // Debug: Log OCR results
+    if (data.clip_analysis.ocr_text) {
+      console.log('📝 OCR Detected Text:', data.clip_analysis.ocr_text);
+      if (data.clip_analysis.city_name_checked) {
+        const cityFound = data.clip_analysis.ocr_text.toLowerCase().includes(
+          data.clip_analysis.city_name_checked.toLowerCase()
+        );
+        console.log(`🔍 City Name Check: "${data.clip_analysis.city_name_checked}" ${cityFound ? '✅ FOUND' : '❌ NOT FOUND'}`);
+      }
+    }
     
     return {
       hasText: data.clip_analysis.has_text,
@@ -83,6 +107,8 @@ export async function analyzeWithCLIP(
       rawDifficultyScore: data.clip_analysis.raw_difficulty_score,
       scores: data.clip_analysis.scores,
       analyzedImages: data.clip_analysis.analyzed_images,
+      ocrText: data.clip_analysis.ocr_text,
+      cityNameChecked: data.clip_analysis.city_name_checked,
     };
     
   } catch (error) {

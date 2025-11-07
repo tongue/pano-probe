@@ -61,6 +61,7 @@ class AnalysisRequest(BaseModel):
     lat: float
     lng: float
     num_views: int = 1  # Number of different angles to analyze
+    city_name: str = None  # Optional: City name to check in OCR text
 
 
 class CLIPAnalysisResponse(BaseModel):
@@ -75,6 +76,8 @@ class CLIPAnalysisResponse(BaseModel):
     raw_difficulty_score: float
     scores: Dict[str, float]  # All 28 prompt scores for verbose display
     analyzed_images: Optional[Dict[str, str]] = None  # Base64 encoded images for debugging (N,E,S,W)
+    ocr_text: Optional[str] = None  # Debug: All text detected by OCR
+    city_name_checked: Optional[str] = None  # Debug: What city name was checked
 
 
 class EnsembleAnalysisResponse(BaseModel):
@@ -222,6 +225,10 @@ async def analyze_location(request: AnalysisRequest):
         
         logger.info(f"✅ CLIP 360° analysis complete! Difficulty: {result['difficulty']}/5")
         
+        # Store OCR results for debugging
+        ocr_detected_text = None
+        city_name_checked = request.city_name
+        
         # ENHANCE WITH OCR - Fast English-only text detection
         if ocr_analyzer:
             logger.info("📝 Running English OCR on all 8 views (detects text in any language)...")
@@ -231,6 +238,9 @@ async def analyze_location(request: AnalysisRequest):
                 
                 if ocr_result['total_words'] > 0:
                     logger.info(f"✅ OCR complete! Found {ocr_result['total_words']} words in {ocr_result['views_with_text']}/8 views ({ocr_result['avg_confidence']:.0%} confidence)")
+                    
+                    # Store detected text for debugging
+                    ocr_detected_text = ocr_result.get('all_detected_text', '')
                     
                     # Override CLIP's text detection with OCR results (OCR is more accurate!)
                     result['analysis']['has_text'] = True
@@ -257,6 +267,33 @@ async def analyze_location(request: AnalysisRequest):
                         if result['difficulty'] != old_difficulty:
                             logger.info(f"  ↓ Difficulty adjusted {old_difficulty} → {result['difficulty']} (OCR found readable text)")
                             result['analysis']['insights'].append(f"⬇️ Difficulty reduced due to readable text")
+                    
+                    # CHECK FOR CITY NAME IN DETECTED TEXT (MAJOR CLUE!)
+                    if request.city_name and ocr_result.get('all_detected_text'):
+                        all_text = ocr_result['all_detected_text'].lower()
+                        city_lower = request.city_name.lower()
+                        
+                        # Debug: Show what we're checking
+                        logger.info(f"🔍 City name check: Looking for '{request.city_name}' in detected text")
+                        logger.info(f"   Detected text preview: '{ocr_detected_text[:200]}...'")
+                        
+                        # Check for city name (case-insensitive, partial matches ok)
+                        if city_lower in all_text:
+                            logger.info(f"🎯 MAJOR CLUE: City name '{request.city_name}' found in OCR text!")
+                            
+                            # This is a HUGE clue - significantly reduce difficulty
+                            old_difficulty = result['difficulty']
+                            result['difficulty'] = max(1, result['difficulty'] - 2)  # Reduce by 2 levels!
+                            
+                            if result['difficulty'] != old_difficulty:
+                                logger.info(f"  ⬇️⬇️ Difficulty adjusted {old_difficulty} → {result['difficulty']} (city name visible!)")
+                            
+                            # Add prominent insight
+                            city_insight = f"🎯 MAJOR CLUE: City name '{request.city_name}' visible in signs!"
+                            result['analysis']['insights'].insert(0, city_insight)  # Add at very top
+                        else:
+                            logger.info(f"  ❌ City name '{request.city_name}' NOT found in visible text")
+                            logger.info(f"   (Searched for '{city_lower}' in text)")
                 else:
                     logger.info("  No text detected by OCR")
             except Exception as e:
@@ -288,7 +325,9 @@ async def analyze_location(request: AnalysisRequest):
             is_urban=result["analysis"]["is_urban"],
             raw_difficulty_score=result["analysis"]["raw_difficulty_score"],
             scores=result["scores"],  # Aggregated scores from all 4 views
-            analyzed_images=debug_images  # TEMPORARY: All 4 directions for debugging
+            analyzed_images=debug_images,  # TEMPORARY: All 4 directions for debugging
+            ocr_text=ocr_detected_text,  # Debug: All text detected by OCR
+            city_name_checked=city_name_checked  # Debug: What city name was checked
         )
         
         # For now, just return CLIP results

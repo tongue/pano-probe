@@ -121,13 +121,15 @@ class OCRTextAnalyzer:
                 'total_words': 0,
                 'avg_confidence': 0.0,
                 'views_with_text': 0,
-                'total_views': 0
+                'total_views': 0,
+                'all_detected_text': ''
             }
         
         results = []
         total_words = 0
         total_confidence = 0
         views_with_text = 0
+        all_text_parts = []
         
         for i, image in enumerate(images):
             logger.info(f"🔍 OCR analyzing view {i+1}/{len(images)}...")
@@ -138,9 +140,13 @@ class OCRTextAnalyzer:
                 total_words += result['word_count']
                 total_confidence += result['confidence']
                 views_with_text += 1
+                # Collect all detected text
+                if result['detected_text']:
+                    all_text_parts.append(result['detected_text'])
                 logger.info(f"  ✓ Found {result['word_count']} words (confidence: {result['confidence']:.0%})")
         
         avg_confidence = total_confidence / views_with_text if views_with_text > 0 else 0
+        all_detected_text = ' '.join(all_text_parts)
         
         return {
             'has_text': views_with_text > 0,
@@ -148,6 +154,7 @@ class OCRTextAnalyzer:
             'avg_confidence': avg_confidence,
             'views_with_text': views_with_text,
             'total_views': len(images),
+            'all_detected_text': all_detected_text,  # All text from all views combined
             'individual_results': results
         }
 

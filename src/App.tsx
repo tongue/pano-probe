@@ -59,11 +59,19 @@ function App() {
       
       const { lat, lng } = metadata;
       
-      // Run both analyses in parallel
-      const [features, clipAnalysis] = await Promise.all([
-        extractFeatures(lat, lng, panoId),
-        state.backendAvailable ? analyzeWithCLIP(lat, lng) : Promise.resolve(null)
-      ]);
+      // Extract features first (includes city name from reverse geocoding)
+      const features = await extractFeatures(lat, lng, panoId);
+      
+      // Get city name for OCR city name detection
+      const cityName = features.city || features.placeName || null;
+      if (cityName) {
+        console.log(`🏙️ City detected: "${cityName}" - will check if visible in signs`);
+      }
+      
+      // Run CLIP analysis with city name
+      const clipAnalysis = state.backendAvailable 
+        ? await analyzeWithCLIP(lat, lng, 1, cityName)
+        : null;
       
       // Get heuristic-based difficulty
       const heuristicResult = analyzeDifficulty(features);
